@@ -5,7 +5,7 @@ fxporxy code challenge is designed to demonstrate [sidecar pattern](https://docs
 
 ### Task objective ###
 
-* implement `ValidatePath` and pass failing tests in `main_test.go`, however we don't want to limit you so feel free to change the name or project structure/packages in way you believe can suit a production grade Go project. Code and tests are added to give you an idea about the business requirement of the project. 
+* implement `ValidatePath` and pass failing tests in `main_test.go`, however we don't want to limit you so feel free to change the function name or even project structure/packages in way you believe can suit a production grade Go project. Code and tests are added to give you an idea about the business requirement of the task.
 
 * It won't be a sidecar service if it doesn't handle incoming Http request and send it to downstream application service, so please extend project functionality to handle http proxy responsibilities well, you can use any 3rd party packages or stick with standard libraries.
 
