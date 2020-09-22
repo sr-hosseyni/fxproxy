@@ -2,13 +2,15 @@ package main
 
 import (
     "fmt"
+    "log"
+    "net/http"
     "regexp"
     "strings"
 )
 
 const ID_FORMAT = "[a-z]+[0-9]+[a-z0-9]+"
 
-var allowedList = [...]*regexp.Regexp{
+var allowedList = []*regexp.Regexp{
     regexp.MustCompile(`^company$`),                                                    // /company/
     regexp.MustCompile(strings.Replace(`^company/{id}$`, "{id}", ID_FORMAT, 1)),        // /company/{id}
     regexp.MustCompile(strings.Replace(`^company/[a-z0-9]+$`, "{id}", ID_FORMAT, 1)),   // /company/{id}
@@ -22,14 +24,14 @@ var allowedList = [...]*regexp.Regexp{
 
 func main() {
     fmt.Println("Running ...")
-}
 
-func ValidatePath(path string) bool {
-    for _, allowedPath := range allowedList {
-        if allowedPath.MatchString(strings.Trim(strings.ToLower(path), "/")) {
-            return true
-        }
+    proxy := &Proxy{
+        downstream: DownStream{
+            Address: "nginx:80",
+        },
+        allowedList: allowedList,
     }
 
-    return false
+    // Run the web server.
+    log.Fatal(http.ListenAndServe(":8888", proxy))
 }

@@ -27,8 +27,12 @@ func TestValidator(t *testing.T) {
 		{"tenant/account/acc23849", false},
 	}
 
+	proxy := Proxy{
+		allowedList: allowedList,
+	}
+
 	for _, tc := range cases {
-		require.Equal(t, tc.expection, ValidatePath(tc.path), "Test is failing!")
+		require.Equal(t, tc.expection, proxy.ValidatePath(tc.path), "Test is failing!")
 	}
 }
 
