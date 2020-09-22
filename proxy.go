@@ -11,7 +11,7 @@ import (
     "strings"
 )
 
-const PROXY_NOT_FOUND = "Not found!"
+const PATH_NOT_FOUND = "Not found!"
 
 type Proxy struct {
     downstream DownStream
@@ -30,7 +30,7 @@ func (proxy *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     }
 
     w.WriteHeader(http.StatusNotFound)
-    fmt.Fprint(w, PROXY_NOT_FOUND)
+    fmt.Fprint(w, PATH_NOT_FOUND)
 }
 
 func (proxy *Proxy)ValidatePath(path string) bool {

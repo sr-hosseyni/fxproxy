@@ -10,40 +10,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidator(t *testing.T) {
-	var cases = []struct {
-		path      string
-		expection bool
-	}{
-		{"company", true},
-		{"tenant/sj3co3s4", false},
-		{"company/sd45f768", true},
-		{"account/acc74850", true},
-		{"company/account", true},
-		{"acc734340", true},
-		{"account/acc234234/user", true},
-		{"account/blocked", false},
-		{"tenant/account/blocked", true},
-		{"tenant/account/acc23849", false},
-	}
-
-	proxy := Proxy{
-		allowedList: allowedList,
-	}
-
-	for _, tc := range cases {
-		require.Equal(t, tc.expection, proxy.ValidatePath(tc.path), "Test is failing!")
-	}
-}
-
 func TestProxyHandler(t *testing.T) {
 	var cases = map[string]struct {
 		method string
 		path   string
 		status int
 		body   string
+		cookie *http.Cookie
 	}{
-		"/company": {"GET", "/company", http.StatusOK, "I am the backend"},
+		"/company": {"GET", "/company", http.StatusOK, "I am the backend", &http.Cookie{Name: "someName", Value: "SomeValue"}},
+		"/company/sd45f768": {"POST", "/company/sd45f768", http.StatusOK, "Done", nil},
+		"/company/abc85033": {"PUT", "/company/abc85033", http.StatusBadRequest, "Bad Request!", nil},
+		"/account/acc74850": {"GET", "/account/acc74850", http.StatusNotFound, PATH_NOT_FOUND, nil},
 	}
 
 	// downstream server
@@ -52,6 +30,10 @@ func TestProxyHandler(t *testing.T) {
 
 		require.Equal(t, tCase.method, r.Method)
 		require.NotEmpty(t, r.Header.Get("X-Forwarded-For"))
+
+		if tCase.cookie != nil {
+			http.SetCookie(w, tCase.cookie)
+		}
 		w.WriteHeader(tCase.status)
 		w.Write([]byte(tCase.body))
 	}))
@@ -63,6 +45,7 @@ func TestProxyHandler(t *testing.T) {
 		},
 		allowedList: []*regexp.Regexp{
 			regexp.MustCompile(`^company$`),
+			regexp.MustCompile(`^company/[a-z]+[0-9]+[a-z0-9]+$`),
 		},
 	}
 
@@ -85,5 +68,11 @@ func TestProxyHandler(t *testing.T) {
 			t.Fatalf("reading body: %v", err)
 		}
 		require.Equal(t, tCase.body, string(body))
+		if tCase.cookie != nil {
+			require.Equal(t, tCase.cookie.Name, res.Cookies()[0].Name)
+			require.Equal(t, tCase.cookie.Value, res.Cookies()[0].Value)
+		} else {
+			require.Equal(t, 0, len(res.Header["Set-Cookie"])) // len(res.Cookies())
+		}
 	}
 }
