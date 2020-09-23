@@ -1,0 +1,46 @@
+version: '3.7'
+
+services:
+  sample-micro-service:
+    build:
+      context: ./sample-micro-service
+    container_name: sample
+    hostname: sample
+    volumes:
+      - ./sample-micro-service:/var/www
+    networks:
+      - sample_net
+
+  nginx:
+    build:
+      context: sample-micro-service/nginx
+    container_name: nginx
+    volumes:
+      - ./sample-micro-service:/var/www
+      - ./sample-micro-service/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./sample-micro-service/nginx/sites/:/etc/nginx/sites-available
+      - ./sample-micro-service/nginx/conf.d/:/etc/nginx/conf.d
+      - ./logs:/var/log
+    depends_on:
+      - sample-micro-service
+    networks:
+      - sample_net
+
+  fxproxy-for-sample-service:
+    build:
+      context: .
+    container_name: fxproxy
+    hostname: fxproxy
+    ports:
+      - '8888:8888'
+    volumes:
+      - .:/app
+    depends_on:
+      - nginx
+    networks:
+      - sample_net
+
+networks:
+  sample_net:
+    ipam:
+      driver: default

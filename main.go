@@ -27,7 +27,7 @@ func main() {
 
     proxy := &Proxy{
         downstream: DownStream{
-            Address: "nginx:80",
+            Address: "http://nginx:80",
         },
         allowedList: allowedList,
     }
