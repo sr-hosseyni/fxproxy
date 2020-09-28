@@ -6,35 +6,27 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class CompanyController
+class AppController
 {
-    /**
-     * "/account",
-     * "/account/{id}",
-     * "/{id}",
-     * "/account/{id}/user",
-     * "/tenant/account/blocked",
-     */
-
     /**
      * @param Request $request
      * @return JsonResponse
      */
-    public function index(Request $request): JsonResponse
+    public function accounts(Request $request): JsonResponse
     {
         return new JsonResponse(
             [
-                'companies' => [
+                'accounts' => [
                     [
-                        'id' => 'acc23849',
+                        'company' => 'ABC',
                         'foo' => 'bar 3'
                     ],
                     [
-                        'id' => 'sd45f768',
+                        'company' => 'XYZ',
                         'foo' => 'bar 1'
                     ],
                     [
-                        'id' => 'sj3co3s4',
+                        'company' => 'MNO',
                         'foo' => 'bar 2'
                     ],
                 ]
@@ -47,11 +39,11 @@ class CompanyController
      * @param Request $request
      * @return JsonResponse
      */
-    public function show(Request $request, $id): JsonResponse
+    public function account(Request $request, $id): JsonResponse
     {
         return new JsonResponse(
             [
-                'company' => [
+                'account' => [
                     'id' => $id,
                     'foo' => 'bar'
                 ]
@@ -64,7 +56,24 @@ class CompanyController
      * @param Request $request
      * @return JsonResponse
      */
-    public function account(Request $request): JsonResponse
+    public function user(Request $request): JsonResponse
+    {
+        return new JsonResponse(
+            [
+                'account' => [
+                    'company' => 'sj3co3s4',
+                    'foo' => 'bar'
+                ]
+            ],
+            Response::HTTP_OK
+        );
+    }
+
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function blockTenant(Request $request): JsonResponse
     {
         return new JsonResponse(
             [

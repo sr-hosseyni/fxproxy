@@ -1,3 +1,35 @@
-index:
+company_index:
     path: /company
-    controller: App\Controller\CompanyController::company
+    controller: App\Controller\CompanyController::index
+
+company_show:
+    path: /company/{id}
+    controller: App\Controller\CompanyController::show
+
+company_account:
+    path: /company/account
+    controller: App\Controller\CompanyController::account
+
+company_show_short:
+    path: /{id}
+    controller: App\Controller\CompanyController::show
+
+accounts:
+    path: /account
+    controller: App\Controller\AppController::accounts
+
+account:
+    path: /account/{id}
+    controller: App\Controller\AppController::account
+
+user:
+    path: /account/{id}/user
+    controller: App\Controller\AppController::user
+
+blocked:
+    path: /tenant/account/blocked
+    controller: App\Controller\AppController::blockTenant
+
+service_health_check:
+    path: /service/health-check
+    controller: App\Controller\ServiceController::healthCheck
