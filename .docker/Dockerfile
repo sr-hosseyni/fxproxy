@@ -3,6 +3,8 @@ FROM golang:latest
 WORKDIR /app
 
 RUN go get github.com/githubnemo/CompileDaemon
+RUN touch /var/log/fxproxy.log
+ADD conf.yaml /etc/fxproxy.yml
 
 EXPOSE 8888
 

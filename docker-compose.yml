@@ -28,13 +28,15 @@ services:
 
   fxproxy-for-sample-service:
     build:
-      context: .
+      context: .docker
     container_name: fxproxy
     hostname: fxproxy
     ports:
       - '8888:8888'
     volumes:
       - .:/app
+      - .docker/conf.yaml:/etc/fxproxy.yml
+#      - logs/fxproxy/proxy.log:/logs/fxproxy.log
     depends_on:
       - nginx
     networks:

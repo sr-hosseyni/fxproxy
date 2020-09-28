@@ -1,0 +1,21 @@
+proxy_server:
+  host: 1.2.3.4
+  port: 5678
+  log_file: /path/to/log.file
+  log_prefix: test prefix
+  downstream_health_check_url: service/health-check
+  downstream_url: http://nginx:80
+  paths:
+    params:
+      id: "[a-z]+[0-9]+[a-z0-9]+"
+      num: "[0-9]+"
+    allowed:
+      - company
+      - company/{id}
+      - account/{num}
+      - "{id}"
+      - "{id}/{num}"
+      - account/{id}/user/{num}
+management_server:
+  host: 127.0.0.1
+  port: 3344

@@ -1,0 +1,22 @@
+proxy_server:
+  host: 0.0.0.0
+  port: 8080
+  log_file: /var/log/fxproxy.log
+  log_prefix: SampleService::fxproxy
+  downstream_url: http://nginx:80
+  downstream_health_check_url: service/health-check
+  paths:
+    params:
+      id: "[a-z]+[0-9]+[a-z0-9]+"
+    allowed:
+      - company
+      - company/{id}
+      - company/account
+      - account
+      - account/{id}
+      - "{id}"
+      - account/{id}/user
+      - tenant/account/blocked
+management_server:
+  host: 127.0.0.1
+  port: 8000
