@@ -50,15 +50,13 @@ func (proxy *Proxy) initLog(logFile string) {
 }
 
 func (proxy *Proxy) initPaths(params map[string]string, allowedPaths []string) {
-    // regexp.MustCompile(strings.Replace(`^company/{id}$`, "{id}", ID_FORMAT, 1)),
     proxy.downstream.allowedList = make([]*regexp.Regexp, len(allowedPaths))
-        fmt.Println(allowedPaths)
     for key, path := range allowedPaths {
         for param, value := range params {
             path = strings.ReplaceAll(path, "{" + param + "}", value)
         }
         fmt.Println("Adding new path to allowed list : " + path)
-        proxy.downstream.allowedList[key] = regexp.MustCompile(path)
+        proxy.downstream.allowedList[key] = regexp.MustCompile(`^` + path + `$`)
     }
 }
 
