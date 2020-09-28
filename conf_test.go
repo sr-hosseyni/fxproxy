@@ -39,8 +39,9 @@ func TestConfigReader(t *testing.T) {
 
     require.Equal(t, "1.2.3.4", cfg.ProxyServer.Host)
     require.Equal(t, "5678", cfg.ProxyServer.Port)
-    require.Equal(t, "/path/to/log.file", cfg.ProxyServer.LogFile)
-    require.Equal(t, "test prefix", cfg.ProxyServer.LogPrefix)
+    require.Equal(t, "/path/to/log.file", cfg.ProxyServer.Logs.ErrorFile)
+    require.Equal(t, "/path/to/access.file.log", cfg.ProxyServer.Logs.AccessFile)
+    require.Equal(t, "test prefix", cfg.ProxyServer.Logs.Prefix)
     require.Equal(t, "http://nginx:80", cfg.ProxyServer.DownstreamUrl)
     require.Equal(t, "service/health-check", cfg.ProxyServer.DSHealthCheckUrl)
     require.Equal(t, "127.0.0.1", cfg.ManagementServer.Host)

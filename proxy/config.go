@@ -1,8 +1,11 @@
 package proxy
 
 type Config struct {
-    LogFile       string `yaml:"log_file"`
-    LogPrefix     string `yaml:"log_prefix"`
+    Logs struct {
+        ErrorFile  string `yaml:"error_file"`
+        AccessFile string `yaml:"access_file"`
+        Prefix     string `yaml:"prefix"`
+    } `yaml:"logs"`
     DownstreamUrl string `yaml:"downstream_url"`
     Paths         struct {
         Params  map[string]string `yaml:"params"`

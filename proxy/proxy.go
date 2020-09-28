@@ -15,45 +15,62 @@ import (
 const PATH_NOT_FOUND = "Not found!"
 
 type Downstream struct {
-    address      string
-    allowedList  []*regexp.Regexp
+    address     string
+    allowedList []*regexp.Regexp
 }
 
 type Proxy struct {
-    downstream Downstream
-    logPrefix  string
-    logger     io.Writer
+    downstream   Downstream
+    handler      *httputil.ReverseProxy
+    logPrefix    string
+    errorLogger  io.Writer
+    accessLogger io.Writer
 }
 
 func NewProxy(config Config) *Proxy {
     prx := &Proxy{
         downstream: Downstream{
-            address:      config.DownstreamUrl,
-            allowedList:  nil,
+            address:     config.DownstreamUrl,
+            allowedList: nil,
         },
-        logPrefix: config.LogPrefix,
-        logger:    nil,
+        logPrefix:    config.Logs.Prefix,
+        errorLogger:  nil,
+        accessLogger: nil,
     }
 
     prx.initPaths(config.Paths.Params, config.Paths.Allowed)
-    prx.initLog(config.LogFile)
+    prx.initLog(config.Logs.AccessFile, config.Logs.ErrorFile)
+    prx.initHandler()
     return prx
 }
 
-func (proxy *Proxy) initLog(logFile string) {
-    f, err := os.OpenFile(logFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+func (proxy *Proxy) initLog(AccessLogFile string, ErrorLogFile string) {
+    f, err := os.OpenFile(ErrorLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
     if err != nil {
         log.Fatalf("error opening file: %v", err)
     }
     defer f.Close()
-    proxy.logger = f
+    proxy.errorLogger = f
+
+    f, err = os.OpenFile(AccessLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+    if err != nil {
+        log.Fatalf("error opening file: %v", err)
+    }
+    defer f.Close()
+    proxy.accessLogger = f
+}
+
+func (proxy *Proxy) initHandler() {
+    url, _ := url.Parse(proxy.downstream.address)
+    proxy.handler = httputil.NewSingleHostReverseProxy(url)
+    proxy.handler.ErrorLog = log.New(proxy.errorLogger, proxy.logPrefix, log.LstdFlags)
 }
 
 func (proxy *Proxy) initPaths(params map[string]string, allowedPaths []string) {
     proxy.downstream.allowedList = make([]*regexp.Regexp, len(allowedPaths))
     for key, path := range allowedPaths {
         for param, value := range params {
-            path = strings.ReplaceAll(path, "{" + param + "}", value)
+            path = strings.ReplaceAll(path, "{"+param+"}", value)
         }
         fmt.Println("Adding new path to allowed list : " + path)
         proxy.downstream.allowedList[key] = regexp.MustCompile(`^` + path + `$`)
@@ -62,10 +79,7 @@ func (proxy *Proxy) initPaths(params map[string]string, allowedPaths []string) {
 
 func (proxy *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     if proxy.ValidatePath(r.RequestURI) {
-        url, _ := url.Parse(proxy.downstream.address)
-        handler := httputil.NewSingleHostReverseProxy(url)
-        handler.ErrorLog = log.New(proxy.logger, proxy.logPrefix, log.LstdFlags)
-        handler.ServeHTTP(w, r)
+        proxy.handler.ServeHTTP(w, r)
         return
     }
 

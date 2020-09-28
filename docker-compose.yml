@@ -36,7 +36,7 @@ services:
     volumes:
       - .:/app
       - .docker/conf.yaml:/etc/fxproxy.yml
-#      - logs/fxproxy/proxy.log:/logs/fxproxy.log
+#      - logs/fxproxy/:/var/log/
     depends_on:
       - nginx
     networks:
