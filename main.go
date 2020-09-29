@@ -20,6 +20,7 @@ func main() {
     }
 
     prx := proxy.NewProxy(cfg.ProxyServer.Config)
+    defer prx.Close()
 
     // Run the web server.
     log.Fatal(http.ListenAndServe(":8888", prx))

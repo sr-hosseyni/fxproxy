@@ -2,7 +2,6 @@ package proxy
 
 import (
     "fmt"
-    "io"
     "log"
     "net"
     "net/http"
@@ -27,8 +26,8 @@ type Proxy struct {
     handler      *httputil.ReverseProxy
     timeout      *time.Duration
     logPrefix    string
-    errorLogger  io.Writer
-    accessLogger io.Writer
+    errorLogger  *os.File
+    accessLogger *os.File
 }
 
 func NewProxy(config Config) *Proxy {
@@ -55,14 +54,12 @@ func (proxy *Proxy) initLog(AccessLogFile string, ErrorLogFile string) {
     if err != nil {
         log.Fatalf("error opening file: %v", err)
     }
-    defer f.Close()
     proxy.errorLogger = f
 
     f, err = os.OpenFile(AccessLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
     if err != nil {
         log.Fatalf("error opening file: %v", err)
     }
-    defer f.Close()
     proxy.accessLogger = f
 }
 
@@ -91,7 +88,16 @@ func (proxy *Proxy) initHandler() {
     }
 
     proxy.handler.ModifyResponse = func(r *http.Response) error {
-        fmt.Fprintf(proxy.errorLogger, "%s", r.Status)
+        fmt.Fprintf(
+            proxy.accessLogger,
+            "%s %s %s %s %s %s\n",
+            proxy.logPrefix,
+            time.Now().Format(time.RFC3339Nano),
+            r.Request.RemoteAddr,
+            r.Request.Method,
+            r.Request.RequestURI,
+            r.Status,
+        )
         return nil
     }
 
@@ -123,6 +129,7 @@ func (proxy *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    fmt.Fprintf(proxy.accessLogger, "%d Not Found %s Path is not allowed!", http.StatusNotFound, r.URL.String())
     w.WriteHeader(http.StatusNotFound)
     fmt.Fprint(w, PATH_NOT_FOUND)
 }
@@ -135,4 +142,9 @@ func (proxy *Proxy) ValidatePath(path string) bool {
     }
 
     return false
+}
+
+func (proxy *Proxy) Close() {
+    proxy.errorLogger.Close()
+    proxy.accessLogger.Close()
 }

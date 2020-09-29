@@ -19,7 +19,7 @@ proxy_server:
   logs:
     error_file: /var/log/fxproxy.error.log
     access_file: /var/log/fxproxy.access.log
-    prefix: SampleService::fxproxy
+    prefix: ""
 management_server:
   host: 127.0.0.1
   port: 8000
