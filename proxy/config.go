@@ -1,6 +1,9 @@
 package proxy
 
+import "time"
+
 type Config struct {
+    Timeout time.Duration `yaml:"proxy_timeout"`
     Logs struct {
         ErrorFile  string `yaml:"error_file"`
         AccessFile string `yaml:"access_file"`

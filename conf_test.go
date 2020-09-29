@@ -4,6 +4,7 @@ import (
     "github.com/stretchr/testify/require"
     "log"
     "testing"
+    "time"
 )
 
 /**
@@ -37,8 +38,10 @@ func TestConfigReader(t *testing.T) {
         log.Fatal(err)
     }
 
+    timeout, _ := time.ParseDuration("10s")
     require.Equal(t, "1.2.3.4", cfg.ProxyServer.Host)
     require.Equal(t, "5678", cfg.ProxyServer.Port)
+    require.Equal(t, timeout, cfg.ProxyServer.Timeout)
     require.Equal(t, "/path/to/log.file", cfg.ProxyServer.Logs.ErrorFile)
     require.Equal(t, "/path/to/access.file.log", cfg.ProxyServer.Logs.AccessFile)
     require.Equal(t, "test prefix", cfg.ProxyServer.Logs.Prefix)

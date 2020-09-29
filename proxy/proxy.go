@@ -4,12 +4,15 @@ import (
     "fmt"
     "io"
     "log"
+    "net"
     "net/http"
+    "net/http/httptest"
     "net/http/httputil"
     "net/url"
     "os"
     "regexp"
     "strings"
+    "time"
 )
 
 const PATH_NOT_FOUND = "Not found!"
@@ -20,8 +23,9 @@ type Downstream struct {
 }
 
 type Proxy struct {
-    downstream   Downstream
+    downstream   *Downstream
     handler      *httputil.ReverseProxy
+    timeout      *time.Duration
     logPrefix    string
     errorLogger  io.Writer
     accessLogger io.Writer
@@ -29,7 +33,9 @@ type Proxy struct {
 
 func NewProxy(config Config) *Proxy {
     prx := &Proxy{
-        downstream: Downstream{
+        handler: nil,
+        timeout: &config.Timeout,
+        downstream: &Downstream{
             address:     config.DownstreamUrl,
             allowedList: nil,
         },
@@ -64,6 +70,40 @@ func (proxy *Proxy) initHandler() {
     url, _ := url.Parse(proxy.downstream.address)
     proxy.handler = httputil.NewSingleHostReverseProxy(url)
     proxy.handler.ErrorLog = log.New(proxy.errorLogger, proxy.logPrefix, log.LstdFlags)
+
+    // if there is some specific rule for changing url
+    if false {
+        proxy.handler.Director = func(req *http.Request) {
+            //req.Header.Add("X-Forwarded-Host", req.Host)
+            //req.Header.Add("X-Origin-Host", proxy.downstream.address)
+            //r.URL.Scheme = url.Scheme
+            //r.URL.Host = url.Host
+            //r.URL.Path = url.Path + r.URL.Path
+        }
+    }
+
+    if proxy.timeout != nil {
+        proxy.handler.Transport = &http.Transport{
+            DialContext: (&net.Dialer{
+                Timeout: *proxy.timeout,
+            }).DialContext,
+        }
+    }
+
+    proxy.handler.ModifyResponse = func(r *http.Response) error {
+        fmt.Fprintf(proxy.errorLogger, "%s", r.Status)
+        return nil
+    }
+
+    proxy.handler.ErrorHandler = func(rw http.ResponseWriter, r *http.Request, err error) {
+        fmt.Printf("error: %+v", err)
+        fmt.Fprintln(proxy.errorLogger, err)
+        rw.WriteHeader(http.StatusInternalServerError)
+        rw.Write([]byte(err.Error()))
+    }
+
+    frontendServer := httptest.NewServer(proxy)
+    defer frontendServer.Close()
 }
 
 func (proxy *Proxy) initPaths(params map[string]string, allowedPaths []string) {

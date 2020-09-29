@@ -1,6 +1,7 @@
 proxy_server:
   host: 1.2.3.4
   port: 5678
+  proxy_timeout: 10s
   downstream_health_check_url: service/health-check
   downstream_url: http://nginx:80
   paths:

@@ -1,6 +1,7 @@
 proxy_server:
   host: 0.0.0.0
   port: 8080
+  proxy_timeout: 10s   # "ns", "us" (or "µs"), "ms", "s", "m", "h"
   downstream_url: http://nginx:80
   downstream_health_check_url: service/health-check
   paths:
