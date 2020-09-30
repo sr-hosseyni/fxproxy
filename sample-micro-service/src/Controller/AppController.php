@@ -48,7 +48,7 @@ class AppController
                     'foo' => 'bar'
                 ]
             ],
-            Response::HTTP_OK
+            $request->get("hang") ? Response::HTTP_INTERNAL_SERVER_ERROR : Response::HTTP_OK
         );
     }
 

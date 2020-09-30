@@ -20,26 +20,29 @@ class CompanyController
      * @param Request $request
      * @return JsonResponse
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): Response
     {
-        return new JsonResponse(
-            [
-                'companies' => [
-                    [
-                        'id' => 'acc23849',
-                        'foo' => 'bar 3'
-                    ],
-                    [
-                        'id' => 'sd45f768',
-                        'foo' => 'bar 1'
-                    ],
-                    [
-                        'id' => 'sj3co3s4',
-                        'foo' => 'bar 2'
-                    ],
-                ]
-            ],
-            Response::HTTP_OK
+
+        return $request->get("hang")
+            ? new Response('Internal Service Error!', Response::HTTP_INTERNAL_SERVER_ERROR)
+            : new JsonResponse(
+                [
+                    'companies' => [
+                        [
+                            'id' => 'acc23849',
+                            'foo' => 'bar 3'
+                        ],
+                        [
+                            'id' => 'sd45f768',
+                            'foo' => 'bar 1'
+                        ],
+                        [
+                            'id' => 'sj3co3s4',
+                            'foo' => 'bar 2'
+                        ],
+                    ]
+                ],
+             Response::HTTP_OK
         );
     }
 

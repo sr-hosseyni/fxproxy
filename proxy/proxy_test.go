@@ -14,14 +14,14 @@ import (
 const ID_FORMAT = "[a-z]+[0-9]+[a-z0-9]+"
 
 var allowedList = []*regexp.Regexp{
-    regexp.MustCompile(`^company$`),                                                    // /company/
-    regexp.MustCompile(strings.Replace(`^company/{id}$`, "{id}", ID_FORMAT, 1)),        // /company/{id}
-    regexp.MustCompile(`^company/account$`),                                            // /company/account
-    regexp.MustCompile(`^account$`),                                                    // /account
-    regexp.MustCompile(strings.Replace(`^account/{id}$`, "{id}", ID_FORMAT, 1)),        // /account/{id}
-    regexp.MustCompile(strings.Replace(`^{id}$`, "{id}", ID_FORMAT, 1)),                // /{id}
-    regexp.MustCompile(strings.Replace(`^account/{id}/user$`, "{id}", ID_FORMAT, 1)),   // /account/{id}/user
-    regexp.MustCompile(`^tenant/account/blocked$`),                                     // /tenant/account/blocked
+    regexp.MustCompile(`^company$`),                                                  // /company/
+    regexp.MustCompile(strings.Replace(`^company/{id}$`, "{id}", ID_FORMAT, 1)),      // /company/{id}
+    regexp.MustCompile(`^company/account$`),                                          // /company/account
+    regexp.MustCompile(`^account$`),                                                  // /account
+    regexp.MustCompile(strings.Replace(`^account/{id}$`, "{id}", ID_FORMAT, 1)),      // /account/{id}
+    regexp.MustCompile(strings.Replace(`^{id}$`, "{id}", ID_FORMAT, 1)),              // /{id}
+    regexp.MustCompile(strings.Replace(`^account/{id}/user$`, "{id}", ID_FORMAT, 1)), // /account/{id}/user
+    regexp.MustCompile(`^tenant/account/blocked$`),                                   // /tenant/account/blocked
 }
 
 func TestValidator(t *testing.T) {
@@ -39,6 +39,12 @@ func TestValidator(t *testing.T) {
         {"account/blocked", false},
         {"tenant/account/blocked", true},
         {"tenant/account/acc23849", false},
+
+        {"company/something?foo=bar", false},
+        {"company?foo=bar", true},
+        {"tenant/account/blocked?foo=bar&x=z", true},
+        {"acc23849?xyz", true},
+        {"company?", true},
     }
 
     proxy := proxy{
@@ -60,16 +66,18 @@ func TestProxyHandler(t *testing.T) {
         body   string
         cookie *http.Cookie
     }{
-        "/company": {"GET", "/company", http.StatusOK, "I am the backend", &http.Cookie{Name: "someName", Value: "SomeValue"}},
+        "/company":          {"GET", "/company", http.StatusOK, "I am the backend", &http.Cookie{Name: "someName", Value: "SomeValue"}},
         "/company/sd45f768": {"POST", "/company/sd45f768", http.StatusOK, "Done", nil},
         "/company/abc85033": {"PUT", "/company/abc85033", http.StatusBadRequest, "Bad Request!", nil},
         "/account/acc74850": {"GET", "/account/acc74850", http.StatusNotFound, PATH_NOT_FOUND, nil},
+        "/account/acc74850?foo=bar": {"GET", "/account/acc74850?foo=bar&x=y", http.StatusNotFound, PATH_NOT_FOUND, nil},
     }
 
     // downstream server
     backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         tCase := cases[r.RequestURI]
 
+        require.Equal(t, tCase.path, r.URL.Path)
         require.Equal(t, tCase.method, r.Method)
         require.NotEmpty(t, r.Header.Get("X-Forwarded-For"))
 
@@ -81,15 +89,19 @@ func TestProxyHandler(t *testing.T) {
     }))
     defer backend.Close()
 
-    prx := &proxy{
-    	downstream: &downstream{
-    		address: backend.URL,
-            allowedList: []*regexp.Regexp{
-                regexp.MustCompile(`^company$`),
-                regexp.MustCompile(`^company/[a-z]+[0-9]+[a-z0-9]+$`),
+    prx := NewProxy(Config{
+        DownstreamUrl: backend.URL,
+        Paths: struct {
+            Params  map[string]string `yaml:"params"`
+            Allowed []string          `yaml:"allowed"`
+        }{
+            Params: map[string]string{"id": "[a-z]+[0-9]+[a-z0-9]+"},
+            Allowed: []string{
+                "company",
+                "company/{id}",
             },
-    	},
-    }
+        },
+    })
 
     // sidecar server
     sidecar := httptest.NewServer(prx)

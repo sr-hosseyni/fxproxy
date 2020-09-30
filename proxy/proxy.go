@@ -5,7 +5,6 @@ import (
     "log"
     "net"
     "net/http"
-    "net/http/httptest"
     "net/http/httputil"
     "net/url"
     "os"
@@ -30,7 +29,8 @@ type proxy struct {
     accessLogger *os.File
 
     // very simple index for measuring downstream faults
-    failureIndex  int
+    failedRequestsCount     int
+    successfulRequestsCount int
 }
 
 func NewProxy(config Config) *proxy {
@@ -53,17 +53,21 @@ func NewProxy(config Config) *proxy {
 }
 
 func (proxy *proxy) initLog(AccessLogFile string, ErrorLogFile string) {
-    f, err := os.OpenFile(ErrorLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-    if err != nil {
-        log.Fatalf("error opening file: %v", err)
+    if ErrorLogFile != "" {
+        f, err := os.OpenFile(ErrorLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+        if err != nil {
+            log.Fatalf("error opening file: %v", err)
+        }
+        proxy.errorLogger = f
     }
-    proxy.errorLogger = f
 
-    f, err = os.OpenFile(AccessLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-    if err != nil {
-        log.Fatalf("error opening file: %v", err)
+    if AccessLogFile != "" {
+        f, err := os.OpenFile(AccessLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+        if err != nil {
+            log.Fatalf("error opening file: %v", err)
+        }
+        proxy.accessLogger = f
     }
-    proxy.accessLogger = f
 }
 
 func (proxy *proxy) initHandler() {
@@ -91,28 +95,31 @@ func (proxy *proxy) initHandler() {
     }
 
     proxy.handler.ModifyResponse = func(r *http.Response) error {
-        fmt.Fprintf(
-            proxy.accessLogger,
-            "%s %s %s %s %s %s\n",
-            proxy.logPrefix,
-            time.Now().Format(time.RFC3339Nano),
-            r.Request.RemoteAddr,
-            r.Request.Method,
-            r.Request.RequestURI,
-            r.Status,
-        )
+        if proxy.accessLogger != nil {
+            fmt.Fprintf(
+                proxy.accessLogger,
+                "%s %s %s %s %s %s\n",
+                proxy.logPrefix,
+                time.Now().Format(time.RFC3339Nano),
+                r.Request.RemoteAddr,
+                r.Request.Method,
+                r.Request.RequestURI,
+                r.Status,
+            )
+        }
         return nil
     }
 
     proxy.handler.ErrorHandler = func(rw http.ResponseWriter, r *http.Request, err error) {
         fmt.Printf("error: %+v", err)
-        fmt.Fprintln(proxy.errorLogger, err)
+
+        if proxy.errorLogger != nil {
+            fmt.Fprintln(proxy.errorLogger, err)
+        }
+
         rw.WriteHeader(http.StatusInternalServerError)
         rw.Write([]byte(err.Error()))
     }
-
-    frontendServer := httptest.NewServer(proxy)
-    defer frontendServer.Close()
 }
 
 func (proxy *proxy) initPaths(params map[string]string, allowedPaths []string) {
@@ -149,7 +156,7 @@ func (proxy *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (proxy *proxy) ValidatePath(path string) bool {
     for _, allowedPath := range proxy.downstream.allowedList {
-        if allowedPath.MatchString(strings.Trim(strings.ToLower(path), "/")) {
+        if allowedPath.MatchString(strings.Trim(strings.ToLower(strings.Split(path, "?")[0]), "/")) {
             return true
         }
     }
