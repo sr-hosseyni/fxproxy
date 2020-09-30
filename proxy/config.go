@@ -3,6 +3,7 @@ package proxy
 import "time"
 
 type Config struct {
+    ServiceName string `yaml:"service_name"`
     Timeout time.Duration `yaml:"proxy_timeout"`
     Logs struct {
         ErrorFile  string `yaml:"error_file"`

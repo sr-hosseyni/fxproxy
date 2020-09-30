@@ -9,39 +9,41 @@ import (
 
 type server struct {
     *http.Server
+    stats           []StatsResourceInterface
+    healthCheckUrls map[string]string
 }
 
 type healthResponse struct {
-    ServiceStatus int `json:"service_status"`
-    FailureIndex  int `json:"failure_index"`
+    ServiceStatus string                    `json:"service_status"`
+    Stats         map[string]map[string]int `json:"stats"`
 }
 
 func NewServer(config Config) *server {
-    return &server{
+    server := &server{
         Server: &http.Server{
-            Addr:    config.Host + ":" + config.Port,
-            Handler: initRouter(config.HealthCheckUrl),
+            Addr: config.Host + ":" + config.Port,
         },
+        stats:           []StatsResourceInterface{},
+        healthCheckUrls: config.HealthCheckUrls,
     }
+
+    server.initRouter()
+    return server
 }
 
-func initRouter(HealthCheckUrl string) *http.ServeMux {
-    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+func (server *server) initRouter() {
+
+    router := http.NewServeMux()
+
+    router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         fmt.Fprintln(w, "Fxproxy management system!")
     })
 
-    http.HandleFunc("/health-check", func(w http.ResponseWriter, r *http.Request) {
+    router.HandleFunc("/health-check", func(w http.ResponseWriter, r *http.Request) {
 
         fmt.Println("Health check request!")
-        resp, err := http.Get(HealthCheckUrl)
-        if err != nil {
-            log.Fatalln(err)
-        }
 
-        respBody, err := json.Marshal(&healthResponse{
-            ServiceStatus: resp.StatusCode,
-            FailureIndex:  0, // Dummy value
-        })
+        respBody, err := json.Marshal(server.getStats())
 
         if err != nil {
             fmt.Fprintln(w, err)
@@ -52,7 +54,38 @@ func initRouter(HealthCheckUrl string) *http.ServeMux {
         w.Write(respBody)
     })
 
-    return http.DefaultServeMux
+    server.Handler = router
+}
+
+func (server server) callHealthCheck(serviceName string) int {
+    resp, err := http.Get(server.healthCheckUrls[serviceName])
+    if err != nil {
+        log.Fatalln(err)
+    }
+
+    return resp.StatusCode
+}
+
+func (server server) getStats() *healthResponse {
+    res := &healthResponse{
+        ServiceStatus: "OK",
+        Stats:         map[string]map[string]int{},
+    }
+
+    for _, resource := range server.stats {
+        name := resource.GetServiceName()
+        res.Stats[name] = resource.GetStats()
+        res.Stats[name]["health-check"] = server.callHealthCheck(name)
+        if res.Stats[name]["health-check"] != http.StatusOK {
+            res.ServiceStatus = "unhealthy"
+        }
+    }
+
+    return res
+}
+
+func (server *server) AddStatsResource(resource StatsResourceInterface) {
+    server.stats = append(server.stats, resource)
 }
 
 func (server *server) Run() {

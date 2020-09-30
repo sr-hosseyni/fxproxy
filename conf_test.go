@@ -40,11 +40,12 @@ func TestConfigReader(t *testing.T) {
 
     timeout, _ := time.ParseDuration("10s")
     require.Equal(t, timeout, cfg.ProxyServer.Timeout)
+    require.Equal(t, "service-1", cfg.ProxyServer.ServiceName)
     require.Equal(t, "/path/to/log.file", cfg.ProxyServer.Logs.ErrorFile)
     require.Equal(t, "/path/to/access.file.log", cfg.ProxyServer.Logs.AccessFile)
     require.Equal(t, "test prefix", cfg.ProxyServer.Logs.Prefix)
     require.Equal(t, "http://nginx:80", cfg.ProxyServer.DownstreamUrl)
-    require.Equal(t, "service/health-check", cfg.ManagementServer.HealthCheckUrl)
+    require.Equal(t, "http://something/service/health-check", cfg.ManagementServer.HealthCheckUrls["service-1"])
     require.Equal(t, "127.0.0.1", cfg.ManagementServer.Host)
     require.Equal(t, "3344", cfg.ManagementServer.Port)
     require.Equal(t, []string{

@@ -24,6 +24,7 @@ func main() {
     defer prx.Close()
 
     manager := management.NewServer(cfg.ManagementServer)
+    manager.AddStatsResource(prx)
     manager.Run()
 
     defer manager.Close()

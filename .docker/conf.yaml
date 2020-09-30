@@ -2,6 +2,7 @@ proxy_server:
   host: 0.0.0.0
   port: 8080
   proxy_timeout: 10s   # "ns", "us" (or "µs"), "ms", "s", "m", "h"
+  service_name: sample_service
   downstream_url: http://nginx:80
   paths:
     params:
@@ -22,4 +23,5 @@ proxy_server:
 management_server:
   host: 0.0.0.0
   port: 8000
-  downstream_health_check_url: http://nginx:80/service/health-check  # full url
+  downstream_health_check_urls:
+    sample_service: http://nginx:80/service/health-check  # full url

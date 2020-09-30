@@ -21,6 +21,7 @@ type downstream struct {
 }
 
 type proxy struct {
+    serviceName  string
     downstream   *downstream
     handler      *httputil.ReverseProxy
     timeout      *time.Duration
@@ -29,21 +30,26 @@ type proxy struct {
     accessLogger *os.File
 
     // very simple index for measuring downstream faults
-    failedRequestsCount     int
-    successfulRequestsCount int
+    failedRequestsCount  int
+    totalRequestsCount   int
+    invalidRequestsCount int
 }
 
 func NewProxy(config Config) *proxy {
     prx := &proxy{
+        serviceName: config.ServiceName,
         handler: nil,
         timeout: &config.Timeout,
         downstream: &downstream{
             address:     config.DownstreamUrl,
             allowedList: nil,
         },
-        logPrefix:    config.Logs.Prefix,
-        errorLogger:  nil,
-        accessLogger: nil,
+        logPrefix:            config.Logs.Prefix,
+        errorLogger:          nil,
+        accessLogger:         nil,
+        failedRequestsCount:  0,
+        totalRequestsCount:   0,
+        invalidRequestsCount: 0,
     }
 
     prx.initPaths(config.Paths.Params, config.Paths.Allowed)
@@ -107,6 +113,11 @@ func (proxy *proxy) initHandler() {
                 r.Status,
             )
         }
+
+        if r.StatusCode >= 500 {
+            proxy.failedRequestsCount++
+        }
+
         return nil
     }
 
@@ -134,11 +145,13 @@ func (proxy *proxy) initPaths(params map[string]string, allowedPaths []string) {
 }
 
 func (proxy *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    proxy.totalRequestsCount++
     if proxy.ValidatePath(r.RequestURI) {
         proxy.handler.ServeHTTP(w, r)
         return
     }
 
+    proxy.invalidRequestsCount++
     fmt.Fprintf(
         proxy.accessLogger,
         "%s %s %s %s %s %d Path is not allowed by proxy!\n",
@@ -162,6 +175,18 @@ func (proxy *proxy) ValidatePath(path string) bool {
     }
 
     return false
+}
+
+func (proxy *proxy) GetServiceName() string {
+    return proxy.serviceName
+}
+
+func (proxy *proxy) GetStats() map[string]int {
+    return map[string]int{
+        "failedRequestsCount":  proxy.failedRequestsCount,
+        "totalRequestsCount":   proxy.totalRequestsCount,
+        "invalidRequestsCount": proxy.invalidRequestsCount,
+    }
 }
 
 func (proxy *proxy) Close() {

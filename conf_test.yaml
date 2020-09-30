@@ -1,4 +1,5 @@
 proxy_server:
+  service_name: service-1
   proxy_timeout: 10s
   downstream_url: http://nginx:80
   paths:
@@ -19,4 +20,5 @@ proxy_server:
 management_server:
   host: 127.0.0.1
   port: 3344
-  downstream_health_check_url: http://something/service/health-check
+  downstream_health_check_urls:
+    service-1: http://something/service/health-check
