@@ -8,6 +8,6 @@ RUN touch /var/log/fxproxy.access.log
 RUN touch /var/log/fxproxy.error.log
 ADD conf.yaml /etc/fxproxy.yml
 
-EXPOSE 8888
+EXPOSE 8888 8000
 
 ENTRYPOINT CompileDaemon --build="go build -mod=mod fxproxy" --command=./fxproxy

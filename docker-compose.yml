@@ -33,6 +33,7 @@ services:
     hostname: fxproxy
     ports:
       - '8888:8888'
+      - '8000:8000'
     volumes:
       - .:/app
       - .docker/conf.yaml:/etc/fxproxy.yml

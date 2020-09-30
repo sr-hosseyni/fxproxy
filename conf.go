@@ -10,13 +10,8 @@ import (
 )
 
 type Config struct {
-    ProxyServer struct {
-        proxy.Config `yaml:",inline"`
-        Host         string `yaml:"host"`
-        Port         string `yaml:"port"`
-        DSHealthCheckUrl string `yaml:"downstream_health_check_url"`
-    } `yaml:"proxy_server"`
-    ManagementServer management.ManagementServerConfig `yaml:"management_server"`
+    ProxyServer proxy.Config `yaml:"proxy_server"`
+    ManagementServer management.Config `yaml:"management_server"`
 }
 
 func NewConfig(configPath string) (*Config, error) {

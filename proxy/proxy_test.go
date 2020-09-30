@@ -41,8 +41,8 @@ func TestValidator(t *testing.T) {
         {"tenant/account/acc23849", false},
     }
 
-    proxy := Proxy{
-        downstream: Downstream{
+    proxy := proxy{
+        downstream: &downstream{
             allowedList: allowedList,
         },
     }
@@ -81,8 +81,8 @@ func TestProxyHandler(t *testing.T) {
     }))
     defer backend.Close()
 
-    prx := &Proxy{
-    	downstream: Downstream{
+    prx := &proxy{
+    	downstream: &downstream{
     		address: backend.URL,
             allowedList: []*regexp.Regexp{
                 regexp.MustCompile(`^company$`),

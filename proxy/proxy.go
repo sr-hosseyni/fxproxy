@@ -16,25 +16,28 @@ import (
 
 const PATH_NOT_FOUND = "Not found!"
 
-type Downstream struct {
+type downstream struct {
     address     string
     allowedList []*regexp.Regexp
 }
 
-type Proxy struct {
-    downstream   *Downstream
+type proxy struct {
+    downstream   *downstream
     handler      *httputil.ReverseProxy
     timeout      *time.Duration
     logPrefix    string
     errorLogger  *os.File
     accessLogger *os.File
+
+    // very simple index for measuring downstream faults
+    failureIndex  int
 }
 
-func NewProxy(config Config) *Proxy {
-    prx := &Proxy{
+func NewProxy(config Config) *proxy {
+    prx := &proxy{
         handler: nil,
         timeout: &config.Timeout,
-        downstream: &Downstream{
+        downstream: &downstream{
             address:     config.DownstreamUrl,
             allowedList: nil,
         },
@@ -49,7 +52,7 @@ func NewProxy(config Config) *Proxy {
     return prx
 }
 
-func (proxy *Proxy) initLog(AccessLogFile string, ErrorLogFile string) {
+func (proxy *proxy) initLog(AccessLogFile string, ErrorLogFile string) {
     f, err := os.OpenFile(ErrorLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
     if err != nil {
         log.Fatalf("error opening file: %v", err)
@@ -63,7 +66,7 @@ func (proxy *Proxy) initLog(AccessLogFile string, ErrorLogFile string) {
     proxy.accessLogger = f
 }
 
-func (proxy *Proxy) initHandler() {
+func (proxy *proxy) initHandler() {
     url, _ := url.Parse(proxy.downstream.address)
     proxy.handler = httputil.NewSingleHostReverseProxy(url)
     proxy.handler.ErrorLog = log.New(proxy.errorLogger, proxy.logPrefix, log.LstdFlags)
@@ -112,7 +115,7 @@ func (proxy *Proxy) initHandler() {
     defer frontendServer.Close()
 }
 
-func (proxy *Proxy) initPaths(params map[string]string, allowedPaths []string) {
+func (proxy *proxy) initPaths(params map[string]string, allowedPaths []string) {
     proxy.downstream.allowedList = make([]*regexp.Regexp, len(allowedPaths))
     for key, path := range allowedPaths {
         for param, value := range params {
@@ -123,18 +126,28 @@ func (proxy *Proxy) initPaths(params map[string]string, allowedPaths []string) {
     }
 }
 
-func (proxy *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (proxy *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     if proxy.ValidatePath(r.RequestURI) {
         proxy.handler.ServeHTTP(w, r)
         return
     }
 
-    fmt.Fprintf(proxy.accessLogger, "%d Not Found %s Path is not allowed!", http.StatusNotFound, r.URL.String())
+    fmt.Fprintf(
+        proxy.accessLogger,
+        "%s %s %s %s %s %d Path is not allowed by proxy!\n",
+        proxy.logPrefix,
+        time.Now().Format(time.RFC3339Nano),
+        r.RemoteAddr,
+        r.Method,
+        r.RequestURI,
+        http.StatusNotFound,
+    )
+
     w.WriteHeader(http.StatusNotFound)
     fmt.Fprint(w, PATH_NOT_FOUND)
 }
 
-func (proxy *Proxy) ValidatePath(path string) bool {
+func (proxy *proxy) ValidatePath(path string) bool {
     for _, allowedPath := range proxy.downstream.allowedList {
         if allowedPath.MatchString(strings.Trim(strings.ToLower(path), "/")) {
             return true
@@ -144,7 +157,7 @@ func (proxy *Proxy) ValidatePath(path string) bool {
     return false
 }
 
-func (proxy *Proxy) Close() {
+func (proxy *proxy) Close() {
     proxy.errorLogger.Close()
     proxy.accessLogger.Close()
 }

@@ -2,6 +2,7 @@ package main
 
 import (
     "fmt"
+    "fxproxy/management"
     "fxproxy/proxy"
     "log"
     "net/http"
@@ -19,8 +20,13 @@ func main() {
         log.Fatal(err)
     }
 
-    prx := proxy.NewProxy(cfg.ProxyServer.Config)
+    prx := proxy.NewProxy(cfg.ProxyServer)
     defer prx.Close()
+
+    manager := management.NewServer(cfg.ManagementServer)
+    manager.Run()
+
+    defer manager.Close()
 
     // Run the web server.
     log.Fatal(http.ListenAndServe(":8888", prx))
