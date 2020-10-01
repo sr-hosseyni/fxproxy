@@ -18,3 +18,23 @@ fxporxy code challenge is designed to demonstrate [sidecar pattern](https://docs
 * Follow Idiomatic Go
 * Design a loosely coupled and highly maintainable code
 * Since this service is expected to handle all traffic to pod/application service, code is expected to be fast and resilient
+
+## RUN
+```shell script
+git clone git@github.com:sr-hosseyni/fxproxy.git
+cd fxproxy
+docker-compose up -d
+```
+
+http://localhost:8888/company  
+http://127.0.0.1:8000/health-check
+
+## TODO
+* Request handling duration (time takes to get response from downstream) and some other metrics.
+* Current fxproxy container has prepared for development env by hot-reload, For deployment we need to compile app and copy
+ native binary inside a production docker image.
+* fxproxy should be able to be more configurable!
+* It must be able to handle http 2 in communication with other sidecar proxies, and even RPC
+* Needs more test!
+* Functionality for capability to connect to service discovery.
+* Handling outgoing traffic from the backend micro-service to other services
